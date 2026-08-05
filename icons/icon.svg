@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="避難所寝床カウンター">
+  <rect width="512" height="512" rx="92" fill="#17324d"/>
+  <rect x="74" y="126" width="364" height="260" rx="32" fill="#f8fafc"/>
+  <path d="M116 300h280v52H116z" fill="#2f6f62"/>
+  <path d="M132 232h116c26 0 48 22 48 48v20H132z" fill="#dce9e5"/>
+  <circle cx="164" cy="260" r="22" fill="#7aa99e"/>
+  <path d="M116 352v34M396 352v34" stroke="#f8fafc" stroke-width="22" stroke-linecap="round"/>
+  <path d="M328 182l32 32 58-64" fill="none" stroke="#e5a84b" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
