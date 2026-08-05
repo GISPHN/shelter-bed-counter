@@ -1,0 +1,15 @@
+{
+  "name": "避難所寝床カウンター",
+  "short_name": "寝床カウンター",
+  "description": "床、段ボールベッド、テントを直接観察でカウントしCSV出力するアプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eaf0f5",
+  "theme_color": "#17324d",
+  "lang": "ja",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
