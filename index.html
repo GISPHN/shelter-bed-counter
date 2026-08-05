@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17324d">
+  <meta name="description" content="避難所の床面寝床、段ボールベッド、テントを直接観察で迅速にカウントし、CSVで出力するオフライン対応Webアプリです。">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="寝床カウンター">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <title>避難所寝床カウンター</title>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">SHELTER BED COUNTER</p>
+      <h1>避難所寝床カウンター</h1>
+    </div>
+    <div class="status-stack" aria-live="polite">
+      <span id="networkStatus" class="status-pill">確認中</span>
+      <span id="saveStatus" class="save-status">保存済み</span>
+    </div>
+  </header>
+
+  <main id="app" class="app-shell">
+    <nav class="tab-nav" aria-label="主要メニュー">
+      <button class="tab-button is-active" data-view="new" type="button">新規調査</button>
+      <button class="tab-button" data-view="records" type="button">保存データ <span id="recordCountBadge" class="badge">0</span></button>
+      <button class="tab-button" data-view="help" type="button">使い方</button>
+    </nav>
+
+    <section id="view-new" class="view is-active" aria-labelledby="newSurveyHeading">
+      <div id="setupPanel" class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">STEP 1</p>
+            <h2 id="newSurveyHeading">調査情報</h2>
+          </div>
+          <button id="resumeDraftButton" class="button button-secondary hidden" type="button">途中データを再開</button>
+        </div>
+
+        <form id="surveyForm" novalidate>
+          <div class="form-grid">
+            <label class="field field-wide">
+              <span>施設名 <em>必須</em></span>
+              <select id="shelterSelect" required>
+                <option value="">施設を選択してください</option>
+              </select>
+            </label>
+
+            <label id="customShelterField" class="field field-wide hidden">
+              <span>施設名を自由入力 <em>必須</em></span>
+              <input id="customShelterName" type="text" maxlength="100" autocomplete="off" placeholder="例：臨時避難所A">
+            </label>
+
+            <label class="field">
+              <span>調査日 <em>必須</em></span>
+              <input id="observationDate" type="date" required>
+            </label>
+
+            <label class="field">
+              <span>開始時刻 <em>必須</em></span>
+              <input id="startTime" type="time" step="60" required>
+            </label>
+
+            <label class="field">
+              <span>天気 <em>必須</em></span>
+              <select id="weather" required>
+                <option value="">選択してください</option>
+                <option>晴</option>
+                <option>曇</option>
+                <option>雨</option>
+                <option>その他</option>
+                <option>不明</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>観察範囲 <em>必須</em></span>
+              <select id="observationCoverage" required>
+                <option value="complete">施設全体</option>
+                <option value="partial">一部のみ</option>
+                <option value="unknown">不明</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>気温（℃）</span>
+              <input id="temperature" type="number" inputmode="decimal" min="-30" max="60" step="0.1" placeholder="例：31.2">
+            </label>
+
+            <label class="field">
+              <span>湿度（%）</span>
+              <input id="humidity" type="number" inputmode="decimal" min="0" max="100" step="0.1" placeholder="例：68.5">
+            </label>
+
+            <label class="field">
+              <span>WBGT（℃）</span>
+              <input id="wbgt" type="number" inputmode="decimal" min="-10" max="60" step="0.1" placeholder="例：27.9">
+            </label>
+
+            <label class="field">
+              <span>調査者ID</span>
+              <input id="observerId" type="text" maxlength="40" autocomplete="off" placeholder="例：A01">
+            </label>
+
+            <label class="field field-wide">
+              <span>備考</span>
+              <textarea id="notes" rows="3" maxlength="500" placeholder="観察できなかった範囲や判定上の注意点を記録"></textarea>
+            </label>
+          </div>
+
+          <div id="formError" class="form-error hidden" role="alert"></div>
+          <button class="button button-primary button-large full-width" type="submit">カウントを開始</button>
+        </form>
+      </div>
+
+      <div id="counterPanel" class="panel hidden">
+        <div class="counter-header">
+          <div>
+            <p class="step-label">STEP 2</p>
+            <h2 id="activeShelterName">施設名</h2>
+            <p id="activeSurveyMeta" class="muted"></p>
+          </div>
+          <button id="editInfoButton" class="button button-secondary" type="button">調査情報を修正</button>
+        </div>
+
+        <div class="definition-note">
+          1回のタップで、直接観察した設備または寝床スペースを1つ加算します。人の数ではありません。
+        </div>
+
+        <div id="counterGrid" class="counter-grid"></div>
+
+        <div class="counter-toolbar">
+          <button id="undoButton" class="button button-secondary" type="button" disabled>直前の操作を戻す</button>
+          <button id="saveDraftButton" class="button button-secondary" type="button">一時保存</button>
+          <button id="completeSurveyButton" class="button button-primary" type="button">調査を完了</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-records" class="view" aria-labelledby="recordsHeading">
+      <div class="panel">
+        <div class="section-heading records-heading">
+          <div>
+            <p class="step-label">LOCAL DATA</p>
+            <h2 id="recordsHeading">保存データ</h2>
+            <p class="muted">データはこの端末のブラウザ内だけに保存されます。</p>
+          </div>
+          <div class="button-group">
+            <button id="exportAllButton" class="button button-primary" type="button">完了データをCSV出力</button>
+            <button id="deleteAllButton" class="button button-danger-outline" type="button">すべて削除</button>
+          </div>
+        </div>
+        <div id="recordsEmpty" class="empty-state">保存された調査はありません。</div>
+        <div id="recordsList" class="records-list"></div>
+      </div>
+    </section>
+
+    <section id="view-help" class="view" aria-labelledby="helpHeading">
+      <div class="panel prose">
+        <p class="step-label">GUIDE</p>
+        <h2 id="helpHeading">使い方と計数基準</h2>
+
+        <h3>基本操作</h3>
+        <ol>
+          <li>施設名、日時、天気などを入力します。</li>
+          <li>床、段ボールベッド、テントの各ボタンを、対象を1つ確認するたびにタップします。</li>
+          <li>誤入力は「－1」「直前の操作を戻す」または数値の直接編集で修正します。</li>
+          <li>調査完了後、保存データ画面からCSVを出力します。</li>
+        </ol>
+
+        <h3>床の1カウント</h3>
+        <p>床面に直接設置され、1人の就寝に使用されている、または使用されると合理的に判断できる寝床スペース1つを数えます。敷布団、マットレス、簡易マット、寝袋、毛布、段ボールシート等を含みます。荷物だけが置かれた場所、通路、段ボールベッド、テントは含めません。</p>
+
+        <h3>段ボールベッドの1カウント</h3>
+        <p>組み立て済みの段ボールベッド1台を数えます。使用中、空床、荷物置き等の状態は区別しません。</p>
+
+        <h3>テントの1カウント</h3>
+        <p>避難者の生活または就寝に用いられる独立したテント1張を数えます。運営本部、給水、医療救護、物資保管等の業務用テントは含めません。</p>
+
+        <h3>データ管理</h3>
+        <p>入力内容は操作ごとに自動保存されます。通信がない場所でも、初回読み込み後は利用できます。ブラウザの閲覧データを消去すると保存データも消えるため、調査後はCSVを必ず保存してください。</p>
+
+        <div class="install-box">
+          <div>
+            <h3>ホーム画面に追加</h3>
+            <p>対応ブラウザではアプリのように起動できます。</p>
+          </div>
+          <button id="installButton" class="button button-secondary hidden" type="button">インストール</button>
+        </div>
+
+        <p class="version-line">アプリ版：<span id="appVersionText"></span></p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="summaryDialog" class="dialog">
+    <form method="dialog" class="dialog-card">
+      <h2>調査結果の確認</h2>
+      <div id="summaryContent"></div>
+      <div class="dialog-actions">
+        <button value="cancel" class="button button-secondary">修正する</button>
+        <button id="confirmCompleteButton" value="default" class="button button-primary">保存して完了</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="postExportDialog" class="dialog">
+    <form method="dialog" class="dialog-card">
+      <h2>CSVを出力しました</h2>
+      <p>端末内の保存データをどうしますか。</p>
+      <div class="dialog-actions dialog-actions-stack">
+        <button id="keepAfterExportButton" value="keep" class="button button-primary">端末内に残す</button>
+        <button id="deleteAfterExportButton" value="delete" class="button button-danger-outline">出力した完了データを削除</button>
+        <button value="later" class="button button-secondary">後で判断する</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
