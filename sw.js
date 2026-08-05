@@ -1,6 +1,6 @@
-const CACHE_NAME = 'shelter-bed-counter-v1.0.1';
+const CACHE_NAME = 'shelter-bed-counter-layout-v2';
 const APP_ASSETS = [
-  './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
+  './', './index.html', './styles.css', './counting-mode.css', './app.js', './counting-mode.js', './manifest.webmanifest',
   './icons/icon.svg'
 ];
 
